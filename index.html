@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ug" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ئاۋتاخۇن - ئەقلىي خەۋەر سۇپىسى</title>
+    <style>
+        @font-face {
+            font-family: 'ukijekran';
+            src: local('UKIJ Ekran'), local('UKIJEkran');
+        }
+
+        :root {
+            --bg-color: #f3f4f6;
+            --text-color: #1f2937;
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.3);
+            --primary: #3b82f6;
+            --hover: #2563eb;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #111827;
+            --text-color: #f3f4f6;
+            --glass-bg: rgba(31, 41, 55, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --primary: #60a5fa;
+            --hover: #3b82f6;
+        }
+
+        body {
+            font-family: 'ukijekran', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header { display: flex; justify-content: space-between; align-items: center; }
+
+        button {
+            font-family: 'ukijekran', sans-serif;
+            background-color: var(--primary);
+            color: white; border: none; padding: 10px 15px;
+            border-radius: 8px; cursor: pointer; transition: 0.2s;
+        }
+        button:hover { background-color: var(--hover); }
+
+        input, select {
+            width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 15px;
+            border-radius: 8px; border: 1px solid var(--glass-border);
+            background: var(--glass-bg); color: var(--text-color);
+            font-family: 'ukijekran', sans-serif; box-sizing: border-box;
+        }
+
+        /* يېڭى قوشۇلغان قۇرۇلما لايىھەسى */
+        .layout { display: flex; gap: 20px; margin-top: 20px; }
+        
+        .sidebar {
+            width: 250px; flex-shrink: 0;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+
+        .nav-item {
+            padding: 15px; border-radius: 10px; cursor: pointer;
+            transition: 0.3s; font-size: 18px; border: 1px solid transparent;
+        }
+        .nav-item:hover, .nav-item.active { background: var(--primary); color: white; }
+
+        .main-content { flex-grow: 1; min-height: 400px; }
+
+        #settingsModal, .overlay { display: none; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
+        #settingsModal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; z-index: 1000; max-height: 90vh; overflow-y: auto;}
+    </style>
+</head>
+<body>
+
+    <div class="header glass">
+        <h2>ئەقلىي خەۋەر سۇپىسى</h2>
+        <div>
+            <button onclick="toggleTheme()">🌙 كېچە/كۈندۈز</button>
+            <button onclick="openSettings()">⚙️ تەڭشەك</button>
+        </div>
+    </div>
+
+    <!-- ئاساسلىق قۇرۇلما -->
+    <div class="layout">
+        <!-- ئوڭ تەرەپتىكى تىزىملىك (RTL بولغاچقا ئاپتوماتىك ئوڭدا تۇرىدۇ) -->
+        <div class="sidebar glass">
+            <div class="nav-item active" onclick="switchTab('news')">📰 خەۋەرلەر</div>
+            <div class="nav-item" onclick="switchTab('stats')">📊 سىتاستىكا</div>
+            <div class="nav-item" onclick="switchTab('sources')">🌐 مەنبەلەر</div>
+            <div class="nav-item" onclick="switchTab('dictionary')">📚 لۇغەت ۋە قائىدە</div>
+        </div>
+
+        <!-- سول تەرەپتىكى مەزمۇن كۆزنىكى -->
+        <div class="main-content glass" id="contentArea">
+            <h3 id="contentTitle">يېڭى خەۋەرلەر</h3>
+            <div id="contentBody">
+                <p>تەرجىمە قىلىنغان ساپ خەۋەرلەر بۇ يەردە كۆرۈنىدۇ...</p>
+                <button onclick="playWithOmnivoice()">🎵 ئاڭلاش (Omnivoice)</button>
+                <button style="background-color: #10b981;">✈️ تېلېگراممىغا يوللاش</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- تەڭشەك كۆزنىكى -->
+    <div class="overlay" id="overlay" onclick="closeSettings()"></div>
+    <div class="glass" id="settingsModal">
+        <h3>سىستېما تەڭشەكلىرى</h3>
+        
+        <label>Gemini API ئاچقۇچى:</label>
+        <input type="password" id="geminiKey" placeholder="AI-...">
+        
+        <label>OpenRouter API ئاچقۇچى:</label>
+        <input type="password" id="openrouterKey" placeholder="sk-or-v1-...">
+
+        <!-- AI مودېلنى تاللاش -->
+        <label>ئىشلىتىدىغان AI مودېلى:</label>
+        <select id="aiModel">
+            <optgroup label="Google Gemini (بىۋاسىتە)">
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+            </optgroup>
+            <optgroup label="OpenRouter ئارقىلىق">
+                <option value="google/gemini-3.5-flash">Google Gemini 3.5 Flash</option>
+                <option value="anthropic/claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                <option value="openai/gpt-4o">GPT-4o</option>
+            </optgroup>
+        </select>
+        
+        <label>Telegram Bot Token:</label>
+        <input type="password" id="tgBotToken" placeholder="123456:ABC-DEF...">
+        
+        <label>Telegram Chat ID:</label>
+        <input type="text" id="tgChatId" placeholder="@kanal_ismi ياكى ID">
+        
+        <button onclick="saveSettings()" style="width: 100%; margin-top: 10px;">ساقلاش</button>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+        if(localStorage.getItem('theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+
+        function switchTab(tab) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const title = document.getElementById('contentTitle');
+            const body = document.getElementById('contentBody');
+            
+            if(tab === 'news') { title.innerText = 'يېڭى خەۋەرلەر'; body.innerHTML = '<p>خەۋەرلەر بۇ يەردە كۆرسىتىلىدۇ...</p>'; }
+            else if(tab === 'stats') { title.innerText = 'سىتاستىكا'; body.innerHTML = '<p>يىغىلغان ئومۇمىي خەۋەر: 125 پارچە <br> بۈگۈنكى تەرجىمە: 15 پارچە</p>'; }
+            else if(tab === 'sources') { title.innerText = 'مەنبە باشقۇرۇش'; body.innerHTML = '<input type="text" placeholder="يېڭى RSS ئۇلانمىسى"><button>قوشۇش</button>'; }
+            else if(tab === 'dictionary') { title.innerText = 'لۇغەت ۋە قائىدە'; body.innerHTML = '<input type="text" placeholder="خاتا ئاتالغۇ"><input type="text" placeholder="توغرا تەرجىمىسى"><button>ساقلاش</button>'; }
+        }
+
+        function openSettings() {
+            document.getElementById('settingsModal').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+            fetch('/api/settings').then(res => res.json()).then(data => {
+                document.getElementById('geminiKey').value = data.gemini_key;
+                document.getElementById('openrouterKey').value = data.openrouter_key;
+                document.getElementById('tgBotToken').value = data.tg_bot_token;
+                document.getElementById('tgChatId').value = data.tg_chat_id;
+                if(data.ai_model) document.getElementById('aiModel').value = data.ai_model;
+            });
+        }
+
+        function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; document.getElementById('overlay').style.display = 'none'; }
+
+        async function saveSettings() {
+            const data = {
+                gemini_key: document.getElementById('geminiKey').value,
+                openrouter_key: document.getElementById('openrouterKey').value,
+                tg_bot_token: document.getElementById('tgBotToken').value,
+                tg_chat_id: document.getElementById('tgChatId').value,
+                ai_model: document.getElementById('aiModel').value
+            };
+            const response = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+            const result = await response.json();
+            if(result.status === 'success') { alert(result.message); closeSettings(); }
+        }
+
+        function playWithOmnivoice() {
+            // بۇ يەرلىك Omnivoice قا تەلەپ ئەۋەتىدۇ
+            alert("تېكىست يەرلىك Omnivoice مۇلازىمېتىرىغا (ئادەتتە http://127.0.0.1:5000/tts) ئەۋەتىلىپ، ئاۋاز بىرىكتۈرۈلۈۋاتىدۇ...");
+        }
+    </script>
+</body>
+</html>
